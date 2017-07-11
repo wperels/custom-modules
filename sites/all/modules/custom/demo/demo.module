@@ -1,0 +1,84 @@
+<?php
+
+/* 
+ * Implements hook_permission().
+ */
+ function demo_permission() {
+     return array(
+         'administer demo module' => array(
+             'title' => t('Administer demo module.'),
+             'description' => t('Perform administration tasks for Demo module.'),
+         ),
+     );
+     
+ }
+ 
+ /*
+  * Implements hook_menu().
+  */
+ function demo_menu() {
+  $items = array();
+  
+  $items['demo'] = array(
+      'title' => 'A little demo',
+      'type' => MENU_NORMAL_ITEM,
+      'page callback' => 'demo_basic',
+      'access callback' => 'user_access', //user_access('access content')
+      'access arguments' => array('access content'),
+  );
+  $items['demo2'] = array(
+      'title' => 'A little magic',
+      'page callback' => 'demo_basic2',
+      'access callback' => 'user_access',
+      'access arguments' => array('access content'),
+  );
+  
+  $items['demo/%'] = array(
+      'title' => 'Even more magical',
+      'page callback' => 'demo_magic_extra',
+      'page arguments' => array(1),
+      'access arguments' => array('access content'),
+      'file' => 'demo_magic.extra.inc',
+  );
+  return $items; 
+ }
+ 
+  /*
+ * My callback funtion. 
+ */
+function demo_basic() {
+    return "<strong>This is a test of demo.</strong>";
+}
+
+/*
+ * Very simple page element.
+ */
+function demo_basic2() {
+    $content = array();
+    
+    $content['raw_markup'] = array(
+        '#type' => 'markup',
+        '#markup' => '<p>Truly, this is magical.</p>',
+    );
+    
+    return $content;
+}
+
+
+/*
+ *  Implements hook_node_view().
+ */
+function demo_node_view($node, $view_mode, $langcode) {
+     $node -> content['demo_type'] = array(
+         '#type' => 'markup',
+         '#markup' => '<p>' .t('This is a demo.'). '</p>',
+         '#weight' => -10,
+     );
+     // This is not working??
+     $node->content['demo_list'] = array(
+         '#item' => array('green', 'red', 'white', 'blue'),
+         '#theme' => 'item_list',
+         '#weight' => -9,
+     );
+     //krumo($node);
+ }

@@ -1,0 +1,33 @@
+<?php
+
+/* 
+ * @file
+ * myblock.module
+ */
+
+/*
+ * Implements hook_block_info.
+ */
+function myblock_block_info() {
+  // This example comes from node.module.
+  $blocks['myblock'] = array(
+    'info' => t('My Custom Block'),
+   );
+
+   return $blocks;
+}
+/*
+ * Implements hook_block_view.
+ */
+function myblock_block_view($delta = '') {
+  // This example is adapted from node.module.
+  $block = array();
+
+  switch ($delta) {
+    case 'myblock':
+      $block['subject'] = t('This is my Custom Block');
+      $block['content'] = "<strong>Hello</strong> This is my awsome custom block";
+      break;
+  }
+  return $block;
+}

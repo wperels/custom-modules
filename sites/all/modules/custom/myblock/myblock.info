@@ -1,0 +1,6 @@
+name = My Block module
+description = My Custom Block module.
+core = 7.x
+PHP = 5.2.4
+version = 7.x-1.0
+
