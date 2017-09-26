@@ -58,9 +58,46 @@ function demo_basic2() {
     
     $content['raw_markup'] = array(
         '#type' => 'markup',
-        '#markup' => '<p>Truly, this is magical.</p>',
+        '#markup' => '<p>Truly, this is magical.',
+        '#prefix' => '<p>',
+        '#suffix' => '</p>'
     );
     
+    $variables = array(
+        'path' => 'http://placekitten.com/440/400',
+        'alt' => t('This is kitten'),
+        'title' => t('This is the title'),
+    );
+    
+    $content['themed_data'] = array(
+        '#type' => 'markup',
+        '#markup' => theme('image', $variables),
+        '#prefix' => '<div class="menu-magic-image">',
+        '#suffix' => '</div>',
+        '#attached' => array(
+            'css' => array(
+                drupal_get_path('module', 'demo') . '/menu_magic.css',
+            ),
+        ),
+     );
+    
+    $content['renderable_element'] = array(
+        '#theme' => 'item_list',
+        '#title' => t('How do we know it\'s magic?'),
+        '#items' => array(
+           t("Is is made of wood?"),
+           t("Does it sink in water"),
+           t("Does it weigh the same as a duck?"), 
+           t('The current time is %time.', array('%time' => date('r'))),
+        ),
+        '#cashe' => array(
+            'keys' => array('menu_magic', 'renderable_element'), //menu_magic:renderable_element
+            'bin' => 'cache',
+            'expire' => time() + 30,
+            'granularity' => DRUPAL_CACHE_PER_PAGE,
+        ),
+    );   
+     
     return $content;
 }
 
@@ -80,5 +117,5 @@ function demo_node_view($node, $view_mode, $langcode) {
          '#theme' => 'item_list',
          '#weight' => -9,
      );
-     //krumo($node);
+     krumo($node);
  }
