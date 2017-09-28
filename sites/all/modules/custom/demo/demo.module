@@ -117,5 +117,5 @@ function demo_node_view($node, $view_mode, $langcode) {
          '#theme' => 'item_list',
          '#weight' => -9,
      );
-     krumo($node);
+     //krumo($node);
  }
