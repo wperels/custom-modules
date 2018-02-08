@@ -1,11 +1,12 @@
 <?php
 
 /* 
- * Implements hook_page_alter().
+ *  Implements hook_page_alter().
+ *  Perform alterations before a page is rendered.
  */
 
 function menu_mangler_page_alter(&$page) {
-    if (arg(0) == 'demo2') {
+    if (arg(0) == 'magic') {
         dsm($page);
         $page['content']['system_main']['renderable_element']['#type'] = 'ol';
     }
