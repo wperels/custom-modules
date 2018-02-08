@@ -62,7 +62,7 @@ function demo_basic() {
 }
 
 /*
- * Very simple page element.
+ *  Example of a renderable array.
  */
 function menu_magic_basic() {
     $content = array();
