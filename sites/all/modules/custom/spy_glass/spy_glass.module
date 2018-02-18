@@ -1,0 +1,99 @@
+<?php
+
+/* 
+ * Implement hook_menu().
+ */
+
+function spy_glass_menu() {
+   $items = array();
+   $items['node/%node/spy_glass'] = array(
+      'title' => 'Spy Glass',
+      'description' => 'Take a closer look',
+      'page callback' => 'spy_glass_page',
+      'page arguments' => array(1),
+      'access callback' => 'node_access',
+      'access arguments' => array('view', 1),
+      'type' => MENU_LOCAL_TASK,
+    );
+    return $items;
+}
+
+/*
+ *  Implements hook_theme().
+ *  spy_glass_item is the name of the custom theme function.
+ *  Commented out version is the custom theme function. 
+ *  Other version is moving it to a template file.
+ */
+function spy_glass_theme() {
+    return array(
+        'spy_glass_item' => array(
+           'arguments' => array('title' => NULL, 'data' => NULL), 
+            'template' => 'spy-glass-item',
+        ),
+        
+        /** for theme function
+        'spy_glass_item' => array(
+            'variables' => array('item' => NULL),
+        ),
+        */
+    );
+}
+/*
+ *  Implements page callback function.
+ */
+function spy_glass_page($node) {
+    $information = _spy_glass_serious_spying_business($node);
+    #dsm($information);
+    $content = array();
+    foreach ($information as $item) {
+        $content[] = array(
+            '#type' => 'markup',
+            '#markup' => theme('spy_glass_item', $item),
+        );
+    }
+    return $content;
+}
+/*
+ *  Preprocess function to create variables found in the template file.
+ */
+function spy_glass_preprocess_spy_glass_item(&$variables) {
+    //dsm($variables);
+    $variables['title'] = check_plain($variables['title']);
+    $variables['data'] = check_plain($variables['data']);
+    $variables['module_name'] = t('Spy Glass');
+}
+
+/*
+ *  Custom theme function called spy_glass_item().
+ */
+
+/*
+function theme_spy_glass_item($variables) {
+    $output = '<p>';
+    $output .= '<strong>' . check_plain($variables['title']) . '</strong><br/>';
+    $output .= check_plain($variables['data']);
+    $output .= '</p>';
+    
+    return $output;
+}
+/*
+ * 
+ */
+/*
+ * Collecting information about this node.
+ */
+function _spy_glass_serious_spying_business($node) {
+    $information = array();
+    $information[] = array(
+        'title' => t('Title Character Count'),
+        'data' => t('There are @num char in $node->title.', array('@num' => strlen($node->title))),
+    );
+//        $information [] = array(
+//        'title' => t(''),
+//        'data' => t(''),
+//    );    $information [] = array(
+//        'title' => t(''),
+//        'data' => t(''),
+//    );
+    return $information;
+}
