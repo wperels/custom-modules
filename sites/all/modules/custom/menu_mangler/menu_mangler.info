@@ -1,0 +1,3 @@
+name = menu_mangler
+description = Just a menu mangler module.
+core = 7.x
