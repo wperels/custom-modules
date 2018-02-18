@@ -1,0 +1,3 @@
+name = Select demo
+description = Demo on getting data out of the database
+core = 7.x
