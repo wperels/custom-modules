@@ -1,0 +1,63 @@
+<?php
+
+/**
+ *  Implements hook_menu().
+ */
+function alter_menu() {
+    $items['admin/config/people/passwords'] = array(
+        'title' => 'Bad Password List',
+        'description' => t('Configure a list of passwords that are not allowed'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('alter_passwords_form'),
+       // 'access callback' => 'user access',  // this is the default so can be deleted.
+        'access arguments' => array('administer site configuration'),  // look under permissions find the checkbox, inspect the HTML label.
+        'file' => 'alter_passwords_form.inc',
+                
+    );
+    return $items; // do not forget the return statement on hook_menu().
+} 
+
+
+/* 
+ *  Implements hook_form_alter().
+ */
+function alter_form_alter(&$form, &$form_state, $form_id) {
+    #krumo($form_id);
+    
+    switch($form_id) {
+        case 'user_profile_form' :
+                        
+            $form['account']['pass']['#description'] = t('Please do not use common passwords like "password", "12345", and "love".');
+            $form['#validate'][] = 'alter_validate_password';   // This calls the custom validation function.
+            #krumo($form);
+            break;
+    }
+}
+
+/*
+ *  Implements hook_form_FORM_ID_alter().
+ */
+function alter_form_user_register_form_alter(&$form, &$form_state, $form_id) {
+    $form['account']['pass']['#description'] = t('Please do not use common passwords like "password", "12345", and "love".');
+    $form['#validate'][] = 'alter_validate_password';
+    
+    #krumo($form);
+}
+
+/*
+ *  Custom password validation.
+ */
+function alter_validate_password($form, &$form_state) {
+    //$badpasswords = array('password', '12345', 'love');    // This is a hardcoded array.
+    $badpasswords = variable_get('alter_badpasswords');      // Name of the field in db.
+    $badpasswords_array = explode(', ', $badpasswords);       // Create a new variable use explode()
+                                                             //   to change from string to array
+    #krumo($badpasswords_array);
+  
+    
+    if(in_array($form_state['values']['pass'], $badpasswords_array)) {    // use array variable not string
+        form_set_error('pass', t('Please use a more secure password!'));
+    }
+    
+    #krumo($form_state);
+}
