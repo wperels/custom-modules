@@ -1,7 +1,8 @@
 <?php
 
 /* 
- * Implements hook_page_alter().
+ *  Implements hook_page_alter().
+ *  Perform alterations before a page is rendered.
  */
 
 function menu_mangler_page_alter(&$page) {
