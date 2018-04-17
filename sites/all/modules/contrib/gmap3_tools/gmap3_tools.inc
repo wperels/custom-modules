@@ -1,10 +1,8 @@
 <?php
-
 /**
  * @file
  * An API for working with Gmap3 Tools module.
  */
-
 
 define('GMAP3_TOOLS_MAP_TYPE_ID_HYBRID', 'hybrid');
 define('GMAP3_TOOLS_MAP_TYPE_ID_ROADMAP', 'roadmap');
@@ -36,7 +34,7 @@ define('GMAP3_TOOLS_ZOOM_CONTROL_STYLE_ANDROID', 4);
 /**
  * Default markers position which does nothing.
  */
-define('GMAP3_TOOLS_DEFAULT_MARKERS_POSITION', 'defaul');
+define('GMAP3_TOOLS_DEFAULT_MARKERS_POSITION', 'default');
 /**
  * Default markers position which center markers on map.
  */
@@ -56,7 +54,63 @@ define('GMAP3_TOOLS_DEFAULT_MARKERS_POSITION_CENTER_ZOOM', 'center zoom');
  */
 function gmap3_tools_add_map($options) {
   static $init = FALSE;
+  if (!$init) {
+    $init = TRUE;
+    drupal_add_js(gmap3_tools_get_library_url(), 'external', array('scope' => 'footer'));
+    drupal_add_js(drupal_get_path('module', 'gmap3_tools') . '/gmap3_tools.js', array('scope' => 'footer'));
+  }
 
+  // Merge custom map options with defaults.
+  $options = gmap3_tools_get_options($options);
+
+  // Add map configuration options to js.
+  drupal_add_js(array('gmap3_tools' => array('maps' => array($options))), 'setting');
+}
+
+/**
+ * Attaches the JS to a given form using '#attached'.
+ *
+ * @param array $options
+ *   Gmap configuration array. Check $defaults array for list of all supported
+ *   options.
+ * @param array $form
+ *   The form the JS gets attached to.
+ */
+function gmap3_tools_attach_js($options, array &$form) {
+  // Add JS using the #attached property in order to prevent breaking on
+  // validation errors.
+  $form['#attached']['js'] = array(
+    array(
+      'data' => gmap3_tools_get_library_url(),
+      'type' => 'external',
+    ),
+    array(
+      'data' => drupal_get_path('module', 'gmap3_tools') . '/gmap3_tools.js',
+      'scope' => 'footer',
+    ),
+  );
+
+  // Merge custom map options with defaults.
+  $options = gmap3_tools_get_options($options);
+
+  // Add map configuration options to js.
+  $form['#attached']['js'][] = array(
+    'data' => array(
+      'gmap3_tools' => array(
+        'maps' => array($options)
+      ),
+    ),
+    'type' => 'setting',
+  );
+}
+
+/**
+ * Returns the default JS settings for the map.
+ *
+ * @return array
+ *   The default JS settings.
+ */
+function gmap3_tools_get_options($options) {
   static $defaults = array(
     // Map html element id.
     'mapId' => NULL,
@@ -96,12 +150,14 @@ function gmap3_tools_add_map($options) {
         'style' => GMAP3_TOOLS_ZOOM_CONTROL_STYLE_DEFAULT,
       ),
     ),
-    // Markers.
+    // Each marker can have custom markerOptions array. You should be able to
+    // use all properties from google.maps.MarkerOptions object specification.
+    // See https://developers.google.com/maps/documentation/javascript/reference#MarkerOptions
     'markers' => array(),
-    // Markers options.
+    // Default markers options - will be applied to all markers in map.
     'markerOptions' => array(
       // Marker icon image URL.
-      //'icon' => 'http://your-site/marker-icon.png',
+      //'icon' => 'http://your-site/custom-marker-icon.png',
     ),
     // Info window options.
     'infoWindowOptions' => array(),
@@ -111,27 +167,28 @@ function gmap3_tools_add_map($options) {
       'closeCurrentInfoWindow' => TRUE,
       // Default position and zoom level of markers on map.
       'defaultMarkersPosition' => GMAP3_TOOLS_DEFAULT_MARKERS_POSITION,
+      // Try to position map center based on current user geo location.
+      'geolocation' => FALSE,
     ),
   );
 
-  if (!$init) {
-    $init = TRUE;
-    // Visit https://code.google.com/apis/console and generate new api key if
-    // you need it.
-    $lib_url = 'http://maps.googleapis.com/maps/api/js?&sensor=false';
-    if ($api_key = variable_get('gmap3_tools_api_key', NULL)) {
-      $lib_url .= '&key=' . $api_key;
-    }
-    drupal_add_js($lib_url, 'external', array('scope' => 'footer'));
+  return gmap3_tools_array_union_recursive($defaults, $options);
+}
 
-    drupal_add_js(drupal_get_path('module', 'gmap3_tools') . '/gmap3_tools.js', array('scope' => 'footer'));
+/**
+ * Getter for the google maps JS library.
+ *
+ * @return string
+ *   The library including API key, if one is set.
+ */
+function gmap3_tools_get_library_url() {
+  // Visit https://code.google.com/apis/console and generate new api key if
+  // you need it.
+  $lib_url = '//maps.googleapis.com/maps/api/js?&sensor=false';
+  if ($api_key = variable_get('gmap3_tools_api_key', NULL)) {
+    $lib_url .= '&key=' . $api_key;
   }
-
-  // Merge custom map options with defaults.
-  $options = gmap3_tools_array_union_recursive($defaults, $options);
-
-  // Add map configuration options to js.
-  drupal_add_js(array('gmap3_tools' => array('maps' => array($options))), 'setting');
+  return $lib_url;
 }
 
 /**
@@ -139,14 +196,24 @@ function gmap3_tools_add_map($options) {
  *
  * @param float $lat
  * @param float $lng
- * @param stirng $title
+ * @param string $title
  *   Title is used for marker label.
  * @param string $content
  *   Content is used for marker's info window popup.
+ * @param array $marker_options
+ *   Holds all marker options for this marker.
+ *   @see https://developers.google.com/maps/documentation/javascript/reference#MarkerOptions
+ *   for all posible options.
+ *
+ *   Special gmap3_tools options:
+ *
+ *     relative - boolean. If TRUE then lat and lng coordinates are applied from
+ *       current map center.
+ * 
  * @return array
  *   Marker options array.
  */
-function gmap3_tools_create_marker($lat, $lng, $title = NULL, $content = NULL) {
+function gmap3_tools_create_marker($lat, $lng, $title = NULL, $content = NULL, $marker_options = array()) {
   $marker = array('lat' => $lat, 'lng' => $lng);
   if (isset($title)) {
     $marker['title'] = $title;
@@ -154,6 +221,13 @@ function gmap3_tools_create_marker($lat, $lng, $title = NULL, $content = NULL) {
   if (isset($content)) {
     $marker['content'] = $content;
   }
+
+  if (!isset($marker_options['relative'])) {
+    $marker_options['relative'] = FALSE;
+  }
+  
+  $marker['markerOptions'] = $marker_options;
+  
   return $marker;
 }
 

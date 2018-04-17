@@ -1,5 +1,8 @@
 (function ($) {
 
+// Stores current opened infoWindow.
+var currentInfoWindow = null;
+
 /**
  * Create google map.
  *
@@ -9,37 +12,80 @@
  *   On success returns gmap object.
  */
 function gmap3ToolsCreateMap(map) {
-  if (map.mapId == null) {
+  if (map.mapId === null) {
     alert(Drupal.t('gmap3_tools error: Map id element is not defined.'));
     return null;
   }
 
   // Create map.
   var mapOptions = map.mapOptions;
-  mapOptions.center = new google.maps.LatLng(map.mapOptions.centerX, map.mapOptions.centerY);
+  mapOptions.center = new google.maps.LatLng(mapOptions.centerX, mapOptions.centerY);
   var gmap = new google.maps.Map(document.getElementById(map.mapId), mapOptions);
+  
+  // Store gmap in map element so it can be accessed later from js if needed.
+  $('#' + map.mapId).data('gmap', gmap);
 
-  // Stores current opened infoWindow.
-  var currentInfoWindow = null;
+  // Try HTML5 geolocation.
+  if (map.gmap3ToolsOptions.geolocation && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var pos = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+      gmap.setCenter(pos);
+      gmap3ToolsCreateMarkers(map, gmap);
+    }, function() {
+      // Geolocation service failed.
+      gmap3ToolsCreateMarkers(map, gmap);
+    });
+  }
+  else {
+    // Do not use geolocation or browser do not support geolocation.
+    gmap3ToolsCreateMarkers(map, gmap);
+  }
 
+  return gmap;
+}
+
+/**
+ * Create markers.
+ *
+ * @param {object} map
+ *   gmap3 tools object.
+ * @param {Map} gmap
+ *   Google Map object.
+ */
+function gmap3ToolsCreateMarkers(map, gmap) {
   // Array for storing all markers that are on this map.
   var gmapMarkers = [];
 
   // Create markers for this map.
   var markersNum = 0;
   $.each(map.markers, function (i, markerData) {
-    
+
+    var markerLat = markerData.lat;
+    var markerLng = markerData.lng;
+
+    // Is marker relative from map center?
+    if (markerData.markerOptions.relative) {
+      var pos = gmap.getCenter();
+      markerLat = pos.lat() + markerLat;
+      markerLng = pos.lng() + markerLng;
+    }
+
     var marker = new google.maps.Marker({
-      position: new google.maps.LatLng(markerData.lat, markerData.lng),
+      position: new google.maps.LatLng(markerLat, markerLng),
       map: gmap
     });
-    if (typeof map.markerOptions.icon != 'undefined') {
-      marker.setIcon(map.markerOptions.icon);
-    }
-    if (typeof markerData.title != 'undefined') {
+
+    // Marker options.
+    var markerOptions = $.extend({}, map.markerOptions, markerData.markerOptions);
+    marker.setOptions(markerOptions);
+
+    // Title of marker.
+    if (typeof markerData.title !== 'undefined') {
       marker.setTitle(markerData.title);
     }
-    if (typeof markerData.content != 'undefined') {
+
+    // If marker has content then create info window for it.
+    if (typeof markerData.content !== 'undefined') {
       google.maps.event.addListener(marker, 'click', function(e) {
         if (map.gmap3ToolsOptions.closeCurrentInfoWindow &&  currentInfoWindow != null) {
           currentInfoWindow.close();
@@ -52,10 +98,19 @@ function gmap3ToolsCreateMap(map) {
       });
     }
 
+    // Draggable markers with lat and lng form items support.
+    if (markerOptions.draggable && (markerOptions.dragLatElement || markerOptions.dragLngElement)) {
+      var $latItem = $(markerOptions.dragLatElement);
+      var $lngItem = $(markerOptions.dragLngElement);
+      google.maps.event.addListener(marker, 'drag', function() {
+        $latItem.val(marker.getPosition().lat());
+        $lngItem.val(marker.getPosition().lng());
+      });
+    }
+
     ++markersNum;
     gmapMarkers.push(marker);
   });
-
 
   if (markersNum) {
     // If we are centering markers on map we should move map center near makers.
@@ -64,15 +119,15 @@ function gmap3ToolsCreateMap(map) {
     // when map displays markers.
     // @todo - this can be more smarter - first get exact center from markers
     // and then apply it.
-    if (map.gmap3ToolsOptions.defaultMarkersPosition != 'default') {
-      mapOptions.center = new google.maps.LatLng(map.markers[0].lat, map.markers[0].lng);
+    if (map.gmap3ToolsOptions.defaultMarkersPosition !== 'default') {
+      map.mapOptions.center = new google.maps.LatLng(map.markers[0].lat, map.markers[0].lng);
     }
 
     // Default markers position on map.
-    if (map.gmap3ToolsOptions.defaultMarkersPosition == 'center') {
+    if (map.gmap3ToolsOptions.defaultMarkersPosition === 'center') {
       gmap3ToolsCenterMarkers(gmap, map.markers, markersNum);
     }
-    else if (map.gmap3ToolsOptions.defaultMarkersPosition == 'center zoom') {
+    else if (map.gmap3ToolsOptions.defaultMarkersPosition === 'center zoom') {
       var bounds = new google.maps.LatLngBounds();
       for (var i = 0; i < markersNum; i++) {
         var marker = map.markers[i];
@@ -82,12 +137,8 @@ function gmap3ToolsCreateMap(map) {
     }
   }
 
-  // Store map object and map markers in map element so it can be accessed
-  // later from js if needed.
-  $('#' + map.mapId).data('gmap', gmap);
+  // Store markers in map element so it can be accessed later from js if needed.
   $('#' + map.mapId).data('gmapMarkers', gmapMarkers);
-
-  return gmap;
 }
 
 /**
@@ -105,11 +156,25 @@ function gmap3ToolsCenterMarkers(map, markers, markersNum) {
   map.setCenter(new google.maps.LatLng(centerLat, centerLng));
 }
 
-$(document).ready(function () {
-  // Create all google maps.
-  $.each(Drupal.settings.gmap3_tools.maps, function(i, map) {
-    var gmap = gmap3ToolsCreateMap(map);
-  });
-});
+/**
+ * Attach gmap3_tools maps.
+ */
+Drupal.behaviors.gmap3_tools = {
+  attach: function (context, settings) {
+    // Create all defined google maps.
+    if (Drupal.settings.gmap3_tools === undefined) {
+      return;
+    }
+    $.each(Drupal.settings.gmap3_tools.maps, function(i, map) {
+      // @todo - we should really use css selector here and not only element id.
+      var $mapElement = $('#' + map.mapId, context);
+      if ($mapElement.length === 0 || $mapElement.hasClass('gmap3-tools-processed')) {
+        return;
+      }
+      $mapElement.addClass('gmap3-tools-processed');
+      var gmap = gmap3ToolsCreateMap(map);
+    });
+  }
+};
 
 })(jQuery);

@@ -23,7 +23,7 @@ INSTALLATION
 
 Download module and place it in your contributed module folder. There is no need
 to enable this module but you will need to clear module list cache so Drupal
-can pick path gmap3_tools module - visit admin module list page for this.
+can pick path of gmap3_tools module - visit admin module list page for this.
 
 
 HOW TO USE IT
@@ -70,7 +70,7 @@ Bute basically you need to do 3 things:
 
 
 From API version 3 you do not need to have Google API key in order to use Google
-Map API, but if you need to to that you can change value of gmap3_tools_api_key
+Map API, but if you need to do that you can change value of gmap3_tools_api_key
 variable value.
 
   <?php variable_get('gmap3_tools_api_key', 'YOUR_GOOGLE_API_KEY')); ?>
@@ -80,7 +80,9 @@ definition in gmap3_tools_add_map() function. But in short next features are
 supported for now:
 
 * Map creation with custom center and custom zoom level.
-* Markers with custom icon, title.
+* Markers with custom icon, title. MarkerOptions object is fully supported on
+  global level (for all markers) and locally per each marker. Check example 3
+  in gmap3_tools module code for example.
 * Infoboxes for markers with custom content.
 * Option for auto centering and zooming of added markers on maps.
 
@@ -90,7 +92,7 @@ this:
   // Get gmap object from it canvas.
   var gmap = $('gmap-canvas').data('gmap');
 
-You can also access gmap markers  array  from your custom js code like this:
+You can also access gmap markers array from your custom js code like this:
 
   // Get gmap markers array from it canvas.
   // Do something with map marker.
