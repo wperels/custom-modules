@@ -19,3 +19,6 @@ This website demonstrates custom module development for Drupal 7. The modules im
 
 ## Select module
 ###### General of use the SQL language in conjunction with Drupal to query the database. This module calculates the number of pages that are published and unpublished for each content type. The code creates a page under "Reports " in Admin section to display the results of a query after the data has been converted to an object then printed to the page.
+
+## Demo2 module
+###### Programmatically add a table with custom fields to a MySQL database. This is done the first time the module is enabled, as well as, while running the update.php feature.  As the user views different nodes on the site, information about the node, the user, and a tally of the number of views is not only saved to the database, but also prints at the bottom of a viewed node. Finally, this module adds another field to the already existing database table. This field will capture information about the last view of a particular node then coverts the time stamp to a standard month, day, year format.
