@@ -1,0 +1,304 @@
+<?php
+
+/**
+ * @file
+ * This module provides wrapper functions for the Etsy API.
+ *
+ * Using this module, you can make calls to any Etsy API method and return the results
+ * as a PHP object. Results are cached for performance and to prevent onerous amounts
+ * of API requests.
+ *
+ * @author: Joshua Schroeder (jdschroeder) <http://drupal.org/user/202642>
+ * @upgrade author: Wendy Perelstein (wperels) <https://drupal.org/user/3241457>
+ */
+
+define('ETSY_API_BASE_PATH', 'https://openapi.etsy.com/v2');
+define('ETSY_API_KEY', variable_get('etsy_api_key', ''));
+define('ETSY_CACHE_EXPIRE', 3600);
+
+/**
+*  Implementation of hook_permission().
+*/
+function etsy_permission() {
+  return array(
+    'administer etsy' => array(
+      'title' => t('Administer Etsy'),
+      'description' => t('Perform administration tasks for Etsy.'),
+    ),
+    'view etsy_shop' => array(
+      'title' => t('Administer Etsy Shop'),
+      'description' => t('Perform administration tasks for Etsy Shop.'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_flush_caches().
+ */
+function etsy_flush_caches() {
+  return array('cache_etsy');
+}
+
+/**
+*  Implementation of hook_menu().
+*/
+function etsy_menu() {
+   $items = array();
+
+   $items['admin/settings/etsy'] = array(
+     'title' => 'Etsy',
+     'description' => t('Etsy module settings'),
+     'page callback' => 'etsy_settings',
+     'access arguments' => array('administer etsy'),
+     'type' => MENU_NORMAL_ITEM,
+   );
+
+   return $items;
+}
+/**
+ * Callback for administrative settings form.
+ *
+ * Form that allows administrative configuration.
+ *
+ * @return
+ *   Formatted HTML form.
+ */
+function etsy_settings() {
+   $return = drupal_get_form('etsy_settings_form');
+   return $return;
+}
+
+/**
+ * Defines administrative settings form.
+ *
+ * All settings for this module should be managed through this form.
+ *
+ * @return
+ *   Array of Form API elements.
+ */
+function etsy_settings_form() {
+   $form['etsy_api_key'] = array(
+      '#type' => 'textfield',
+      '#title' => t('API Key'),
+      '#description' => t('Your developer API key.'),
+      '#default_value' => variable_get('etsy_api_key', ''),
+      '#size' => 40,
+      '#maxlength' => 255,
+      '#required' => TRUE,
+      '#weight' => -10,
+    );
+
+$return = system_settings_form($form);
+
+$return['etsy'] = array(
+   '#type' => 'markup',
+   '#prefix' => '<p>',
+   '#suffix' => '</p>',
+   '#value' => t('The term "Etsy" is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.') . '</p><p><a href="http://developer.etsy.com"><img src="' . base_path() . drupal_get_path('module', 'etsy_D7') . '/images/edc_badge1.gif" /></a>',
+);
+
+   return $return;
+}
+
+/**
+ * Conducts the actual call to Etsy's API.
+ *
+ * For full documentation on the Etsy API, please refer to http://developer.etsy.com/docs
+ * This function adheres to the method, argument, and parameters defined in the API.
+ *
+ * @param $method
+ * The Etsy API method to post a request to.
+ *
+ * @param $arguments
+ * An associative array of arguments to be passed in the request path.
+ *
+ * @param $params
+ * An associative array of parameters to be passed in the request path.
+ *
+ * @return
+ * A PHP object, converted from the JSON response
+ */
+function etsy_get_object($method, $arguments = array(), $params = array()) {
+  
+  // TODO: Consolodate arguments and parameters. Move the parameter string stuff after the switch and unset the items that we are using as arguments.
+  
+  // Construct a parameter string to inject into the service call
+  if($params) {
+    $param_keys = array_keys($params);
+    $param_key_value = array();
+    foreach($param_keys as $key) {
+      $param_key_value[] = sprintf('%s=%s', $key, $params[$key]);
+    }
+    $param_string = '&' . implode('&', $param_key_value);
+  }
+  
+  // Based on the specified method, construct the appropriate request path
+  switch ($method) {
+    case 'getUserDetails':
+      $request_string = sprintf('/users/%d', $arguments['user_id']);
+      break;
+      
+    case 'getUsersByName':
+      $request_string = sprintf('/users/keywords/%s', $arguments['search_name']);
+      break;
+    
+    case 'getShopDetails':
+      $request_string = sprintf('/shops/%d', $arguments['user_id']);
+      break;
+        
+    case 'getShopListings':
+      $request_string = sprintf('/shops/%d/listings', $arguments['user_id']);
+      break;
+    
+    case 'getFeaturedDetails':
+      $request_string = sprintf('/shops/%d/listings/featured', $arguments['user_id']);
+      break;
+      
+    case 'getFeaturedSellers':
+      $request_string = '/shops/featured';
+      break;
+      
+    case 'getShopsByName':
+      $request_string = sprintf('/shops/keywords/%s', $arguments['search_name']);
+      break;
+    
+    case 'getListingDetails':
+      $request_string = sprintf('/listings/%d', $arguments['listing_id']);
+      break;
+      
+    case 'getAllListings':
+      $request_string = '/listings/all';
+      break;
+    
+    case 'getListingsByCategory':
+      $request_string = sprintf('/listings/category/%s', $arguments['category']);
+      break;
+    
+    case 'getListingsByColor':
+      $request_string = sprintf('/listings/color/%s', $arguments['color']);
+      break;
+    
+    case 'getListingsByColorAndKeywords':
+      $request_string = sprintf('/listings/color/%s/keywords/%s', $arguments['color'], $arguments['search_terms']);
+      break;
+    
+    case 'getFrontFeaturedListings':
+      $request_string = '/listings/featured/front';
+      break;
+    
+    case 'getListingsByKeyword':
+      $request_string = sprintf('/listings/keywords/%s', $arguments['search_terms']);
+      break;
+    
+    case 'getListingsByMaterials':
+      $request_string = sprintf('/listings/materials/%s', $arguments['materials']);
+      break;
+    
+    case 'getListingsByTags':
+      $request_string = sprintf('/listings/tags/%s', $arguments['tags']);
+      break;
+    
+    case 'getFeedback':
+      $request_string = sprintf('/feedback/%d', $arguments['feedback_id']);
+      break;
+    
+    case 'getFeedbackForUser':
+      $request_string = sprintf('/users/%d/feedback', $arguments['user_id']);
+      break;
+    
+    case 'getFeedbackAsBuyer':
+      $request_string = sprintf('/users/%d/feedback/buyer', $arguments['user_id']);
+      break;
+    
+    case 'getFeedbackForOthers':
+      $request_string = sprintf('/users/%d/feedback/others', $arguments['user_id']);
+      break;
+    
+    case 'getFeedbackAsSeller':
+      $request_string = sprintf('/users/%d/feedback/seller', $arguments['user_id']);
+      break;
+    
+    case 'getTopCategories':
+      $request_string = '/categories';
+      break;
+    
+    case 'getChildCategories':
+      $request_string = sprintf('/categories/%s/children', $arguments['category']);
+      break;
+    
+    case 'getTopTags':
+      $request_string = '/tags';
+      break;
+    
+    case 'getChildTags':
+      $request_string = sprintf('/tags/%s/children', $arguments['tag']);
+      break;
+    
+    case 'getFavorersOfListing':
+      $request_string = sprintf('/listings/%d/favorers', $arguments['listing_id']);
+      break;
+    
+    case 'getFavorersOfShop':
+      $request_string = sprintf('/shops/%d/favorers', $arguments['user_id']);
+      break;
+    
+    case 'getFavoriteListingsOfUser':
+      $request_string = sprintf('/users/%d/favorites/listings', $arguments['user_id']);
+      break;
+    
+    case 'getFavoriteShopsOfUser':
+      $request_string = sprintf('/users/%d/favorites/shops', $arguments['user_id']);
+      break;
+    
+    case 'getGiftGuides':
+      $request_string = '/gift-guides';
+      break;
+    
+    case 'getGiftGuideListings':
+      $request_string = sprintf('/gift-guides/%d/listings', $arguments['guide_id']);
+      break;
+    
+    case 'getMethodTable':
+      $request_string = '/';
+      break;
+    
+    case 'getServerEpoch':
+      $request_string = '/server/epoch';
+      break;
+    
+    case 'ping':
+      $request_string = '/server/ping';
+      break;
+ 
+  }
+  
+  // Use the path to determine the cache id, and make sure it's not more than 255 characters
+  $cache_id = substr('etsy' . str_replace(array('/', '&', '='), '_', 
+    $request_string . $param_string), 0, 255);
+  
+  // Only conduct the API call if we don't have a valid cached version
+  $cached = cache_get($cache_id, 'cache_etsy');
+  if(!$cached) {
+  
+    // Make the call to Etsy's web service using curl
+    $url = sprintf('%s%s?api_key=%s%s', ETSY_API_BASE_PATH, $request_string, ETSY_API_KEY, $param_string);
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response_body = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    
+    // Display error messages if we didn't get a successful response
+    if (intval($status) != 200) {
+      drupal_set_message('Etsy API call failed.', 'error');
+      watchdog('Etsy', t('Etsy API call failed. !error_message'), array('!error_message' => $response_body), WATCHDOG_ERROR);
+    }
+    
+    // Save the results into the cache table
+    cache_set($cache_id, $response_body, 'cache_etsy', time() + ETSY_CACHE_EXPIRE);
+    return json_decode($response_body);
+  }
+  else {
+    return json_decode($cached->data);
+  }
+  
+}

@@ -1,0 +1,13 @@
+
+.etsy-featured-listing {
+	clear: both;
+	line-height: 1.2em;
+	overflow: hidden;
+}
+
+.etsy-featured-listing img {
+	border: 1px solid black;
+	float: left;
+	margin: 0 10px 10px 5px;
+	padding: 1px;
+}

@@ -1,0 +1,5 @@
+name = Etsy API
+description = "Provides API wrapper functions for Etsy's API"
+core = 7.x
+package = Other
+php = 5.2

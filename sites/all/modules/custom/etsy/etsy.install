@@ -1,0 +1,55 @@
+<?php
+
+/**
+*  @file etsy.install
+*  Contains install and update functions for Etsy.
+*/
+
+/**
+*  Etsy module schema;
+*/
+
+function etsy_schema() {
+    $schema = array();
+   $schema['cache_etsy'] = array(
+       'description' => 'Cache table for Etsy shop and product information. Prevents onerous amounts of API calls.',
+       'fields' => array(
+         'cache_id'  => array(
+             'description' => 'The primary identifier for a cache.',
+             'type' => 'serial',
+             'unsigned' => TRUE,
+             'not null' => TRUE,
+         ),
+       ),
+       'primary key' => array('cache_id'),
+   ); 
+   #drupal_get_schema_unprocessed('etsy', 'cache');
+   #$schema['cache_etsy']['description'] = 'Cache table for Etsy shop and product information. Prevents onerous amounts of API calls.';
+return $schema;
+}
+
+/*
+ *  Implements hook_update_N().
+*/
+function etsy_update_7000() {
+    drupal_install_schema('etsy');
+}
+
+/*
+ *  instantiate the OAuth object
+ * OAUTH_CONSUMER_KEY and OAUTH_CONSUMER_SECRET 
+ * are constants holding your key and secret
+ * and are always used when instantiating the OAuth object 
+ */
+//function etsy_update_7001() {
+//
+//    define("OAUTH_CONSUMER_KEY", "3n38k3zmup2ge0epnzwjjymw");
+//    define('OAUTH_CONSUMER_SECRET', 'c510l969h6');
+//    
+//    $oauth = new OAuth(OAUTH_CONSUMER_KEY, OAUTH_CONSUMER_SECRET);
+//
+//        // make an API request for your temporary credentials
+//        $req_token = $oauth->getRequestToken("https://openapi.etsy.com/v2/oauth/request_token?scope=email_r%20listings_w", 'oob');
+//
+//    print $req_token['login_url']."\n";
+//}

@@ -1,0 +1,7 @@
+name = Etsy Shop
+description = "Provides menu callbacks and blocks to display Etsy shop elements"
+core = 7.x
+package = Other
+php = 5.2
+dependencies[] = etsy
+dependencies[] = lightbox2
